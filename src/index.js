@@ -123,9 +123,9 @@ function arcPath(points, data) {
   const curvePath = new THREE.CatmullRomCurve3(points);
   const material = new THREE.MeshLambertMaterial({
     color: data.color,
-    opacity: 0.9,
+    opacity: 1,//0.9
     transparent: true,
-    // wireframe:true,
+    wireframe:true,
   });
   const geometry = new THREE.ExtrudeBufferGeometry(shape, {
     bevelEnabled: false,
@@ -165,7 +165,7 @@ function labelLine(point, data) {
   );
   const material = new THREE.MeshBasicMaterial({ 
     color: data.color,
-    opacity:0.9,
+    opacity:1,//0.9
   });
   // geometry.setFromPoints([startPoint, endPoint]);
   const line = new THREE.Line(geometry, material);
@@ -359,13 +359,12 @@ window.initPie3D = function (opt) {
       circlePie(opt.data).then(() => {
         group.translateX(-100);
         group.translateY(-25);
-        group.translateZ(5);
-        // group.rotateX(Math.PI / -16);
         scene.add(group);
-        groupLegend.rotateX(-Math.PI / 30);
+        groupLegend.rotateZ(Math.PI / 50);
+        groupLegend.rotateY(Math.PI / -20);
         scene.add(groupLegend);
-        window.scene = scene;
-        window.renderer = renderer;
+        // window.scene = scene;
+        // window.renderer = renderer;
       });
       //动态渲染,监听鼠标(光影)   
       animate();
@@ -389,4 +388,4 @@ window.opts = {
 }
 
 //执行
-// initPie3D(opts);
+initPie3D(opts);

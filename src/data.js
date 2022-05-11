@@ -5,7 +5,7 @@
 const respond = {
   data: [
     {
-      name: "1.啊啊大",
+      name: "1.啊啊大(10%)",
       value: 10,
       color: "red",
       style: {
@@ -13,35 +13,35 @@ const respond = {
       },
     },
     {
-      name: "2.特有的风格",
-      value: 20,
+      name: "2.特有的风格(15%)",
+      value: 15,
       color: "green",
       style: {
         fontSize: 7,
       },
     },
     {
-      name: "3.神工鬼斧",
-      value: 10,
+      name: "3.神工鬼斧(20%)",
+      value: 20,
       color: "yellow",
       style: {
-        fontSize: null,
+        fontSize: 7,
       },
     },
     {
-      name: "4.巴马回家",
-      value: 55,
+      name: "4.巴马回家(25%)",
+      value: 25,
       color: "blue",
       style: {
-        fontSize: 9,
+        fontSize: 7,
       },
     },
     {
-      name: "5.电风扇(100%)",
-      value: 5,
+      name: "5.电风扇(30%)",
+      value: 30,
       color: "#f60",
       style: {
-        fontSize: null,
+        fontSize: 7,
       },
     },
   ],
