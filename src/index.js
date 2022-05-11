@@ -26,13 +26,13 @@ let raycaster = new THREE.Raycaster();
 let pointer = new THREE.Vector2();
 let INTERSECTED;
 
-async function init(id, help) {
+async function init(opt) {
   const root = document.body;
   width = window.innerWidth;
   height = window.innerHeight;
   pieDom ? pieDom.remove() : null;
   pieDom = document.createElement("div");
-  pieDom.setAttribute("id", id);
+  pieDom.setAttribute("id", opt.id);
   pieDom.style.width = width;
   pieDom.style.height = height;
   root.append(pieDom);
@@ -74,11 +74,11 @@ async function init(id, help) {
   ambient = new THREE.AmbientLight(0x444444);
   scene.add(ambient);
   //相机
-  camera = new THREE.PerspectiveCamera(45, width / height, 1, 500);
-  camera.position.set(300, 300, 200);
+  camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
+  camera.position.set(0, 160, 400);
   camera.lookAt(scene.position);
   //help-辅助
-  helper(help, THREE, scene, camera, point);
+  helper(opt.help, THREE, scene, camera, point);
 }
 
 /**
@@ -123,14 +123,14 @@ function arcPath(points, data) {
   const curvePath = new THREE.CatmullRomCurve3(points);
   const material = new THREE.MeshLambertMaterial({
     color: data.color,
-    opacity: 1,
+    opacity: 0.9,
     transparent: true,
     // wireframe:true,
   });
   const geometry = new THREE.ExtrudeBufferGeometry(shape, {
     bevelEnabled: false,
     steps: 80,
-    depth: 120,
+    // depth: 120,
     // extrudePath: bezierPath
     extrudePath: curvePath,
   });
@@ -147,10 +147,27 @@ function arcPath(points, data) {
  */
 function labelLine(point, data) {
   const startPoint = new THREE.Vector3(point.x * 0.8, point.y, point.z * 0.8);
-  const endPoint = new THREE.Vector3(point.x, point.y + 120, point.z);
-  const geometry = new THREE.BufferGeometry();
-  const material = new THREE.LineBasicMaterial({ color: data.color });
-  geometry.setFromPoints([startPoint, endPoint]);
+  const endPoint = new THREE.Vector3(point.x, point.y + (200*data.zb) + 25, point.z);
+  // const geometry = new THREE.BufferGeometry();
+  // const material = new THREE.LineBasicMaterial({
+  //   color: data.color,
+  //   linewidth: 30,
+  //   linecap: "round",
+  //   linejoin: "round",
+  // });
+  const linePath = new THREE.LineCurve3(startPoint, endPoint);
+  const geometry = new THREE.TubeGeometry(
+    linePath, //path — Curve - 一个由基类Curve继承而来的3D路径。 Default is a quadratic bezier curve.
+    100, //tubularSegments — Integer - 组成这一管道的分段数，默认值为64。
+    0.15, //radius — Float - 管道的半径，默认值为1。
+    80, //radialSegments — Integer - 管道横截面的分段数目，默认值为8。
+    true //closed — Boolean 管道的两端是否闭合，默认值为false。
+  );
+  const material = new THREE.MeshBasicMaterial({ 
+    color: data.color,
+    opacity:0.9,
+  });
+  // geometry.setFromPoints([startPoint, endPoint]);
   const line = new THREE.Line(geometry, material);
   // scene.add(line);
   group.add(line);
@@ -165,10 +182,10 @@ function labelLine(point, data) {
 function labelText(endPoint, data) {
   const textGeo = new TextGeometry(data.name, {
     font: font, //THREE.Font的实例。
-    size: 10, //Float。字体大小，默认值为100。
-    height: 2, //挤出文本的厚度。默认值为50。
-    curveSegments: 2, //Integer.(表示文本的）曲线上点的数量。默认值为12。
-    bevelEnabled: true, //Boolean.是否开启斜角，默认为false。
+    size: data.style.fontSize? data.style.fontSize:8, //Float。字体大小，默认值为100。
+    height: 0.1, //挤出文本的厚度。默认值为50。
+    curveSegments: 1, //Integer.(表示文本的）曲线上点的数量。默认值为12。
+    bevelEnabled: false, //Boolean.是否开启斜角，默认为false。
     bevelThickness: 0, //Float。文本上斜角的深度，默认值为20。
     bevelSize: 0, //Float。斜角与原始文本轮廓之间的延伸距离。默认值为8。
     bevelSegments: 1, //Integer。斜角的分段数。默认值为3。
@@ -176,8 +193,6 @@ function labelText(endPoint, data) {
   const material = new THREE.MeshPhongMaterial({ color: data.color });
   const mesh = new THREE.Mesh(textGeo, material);
   mesh.name = "label" + data.name;
-  // mesh.rotateY(Math.PI / 3.2);
-  // mesh.rotateX(Math.PI / -10);
   mesh.position.set(endPoint.x, endPoint.y, endPoint.z);
   // scene.add(mesh);
   group.add(mesh);
@@ -188,10 +203,10 @@ function labelText(endPoint, data) {
  * 画图例
  */
 function legend(data) {
-  const geometry = new THREE.BoxGeometry(10, 10, 0.1);
+  const geometry = new THREE.BoxGeometry(8, 8, 0.01);
   const textGeo = new TextGeometry(data.name, {
     font: font, //THREE.Font的实例。
-    size: 8, //Float。字体大小，默认值为100。
+    size: data.style.fontSize? data.style.fontSize:8, //Float。字体大小，默认值为100。
     height: 1, //挤出文本的厚度。默认值为50。
     curveSegments: 20, //Integer.(表示文本的）曲线上点的数量。默认值为12。
     bevelEnabled: false, //Boolean.是否开启斜角，默认为false。
@@ -199,12 +214,13 @@ function legend(data) {
     bevelSize: 0, //Float。斜角与原始文本轮廓之间的延伸距离。默认值为8。
     bevelSegments: 1, //Integer。斜角的分段数。默认值为3。
   });
-  const material = new THREE.MeshPhongMaterial({ color: data.color });
-  const legend = new THREE.Mesh(textGeo, material);
-  const mesh = new THREE.Mesh(geometry, material);
+  const material_legend = new THREE.MeshPhongMaterial({ color: 0xffffff });
+  const material_pic = new THREE.MeshPhongMaterial({ color: data.color });
+  const legend = new THREE.Mesh(textGeo, material_legend);
+  const mesh = new THREE.Mesh(geometry, material_pic);
   legend.name = "legend" + data.name;
   legend.position.set(110, 100 + -20 * count, 0);
-  mesh.position.set(100, 105 + -20 * count, 0);
+  mesh.position.set(100, 103.2 + -20 * count, 0);
   groupLegend.add(legend);
   groupLegend.add(mesh);
   count++;
@@ -215,7 +231,7 @@ function legend(data) {
  */
 function render(animation) {
   // 通过摄像机和鼠标位置更新射线
-  // group.rotateY(0.01);
+  group.rotateY(0.01);
   raycaster.setFromCamera(pointer, camera);
   // 计算物体和射线的焦点
   const intersects = raycaster.intersectObjects(scene.children, true);
@@ -333,26 +349,25 @@ function colorRandom() {
 }
 
 window.initPie3D = function (opt) {
-  const id = opt.id;
-  const help = opt.help;
-  init(id, help).then(() => {
+  init(opt).then(() => {
     loader.load("./Arial Unicode MS_Regular.json", function (resFont) {
       font = resFont;
       //鼠标控制器
       let controls = new OrbitControls(camera, renderer.domElement); //创建控件对象
       controls.addEventListener("change", render);
-      circlePie(respond).then(() => {
+      //绘制
+      circlePie(opt.data).then(() => {
         group.translateX(-100);
         group.translateY(-25);
         group.translateZ(5);
+        // group.rotateX(Math.PI / -16);
         scene.add(group);
-        // groupLegend.rotateX(-Math.PI / 2);
-        // groupLegend.rotateY(Math.PI / 4);
-        // groupLegend.rotateZ(Math.PI / 25);
-        groupLegend.translateX(-30);
-        scene.rotateY(Math.PI / 3.2);
+        groupLegend.rotateX(-Math.PI / 30);
         scene.add(groupLegend);
+        window.scene = scene;
+        window.renderer = renderer;
       });
+      //动态渲染,监听鼠标(光影)   
       animate();
       window.addEventListener("mousemove", onPointerMove);
       window.addEventListener("click", click);
@@ -361,4 +376,17 @@ window.initPie3D = function (opt) {
   });
 };
 
-initPie3D({ id: "pie", help: true });
+/**
+ * 配置
+ * @param id:容器id(保证唯一)
+ * @param data:图形数据
+ * @param help:辅助线 false:不启用;true:启用
+ * */
+window.opts = {
+  id:'pie',
+  data:respond,
+  help:false,
+}
+
+//执行
+// initPie3D(opts);

@@ -19,7 +19,7 @@ export default function help(help, THREE, scene, camera, point) {
     new THREE.Vector3(200, 100, 300)
   );
   const boxHelper = new THREE.Box3Helper(box, 0xffff00);
-//   scene.add(boxHelper);
+  scene.add(boxHelper);
   /*
     PointLightHelper( light : PointLight, sphereSize : Float, color : Hex )
     light -- 要模拟的光源.
@@ -37,7 +37,7 @@ export default function help(help, THREE, scene, camera, point) {
     colorGrid -- 坐标格网格线颜色. 值可以为 Color 类型, 16进制 和 CSS 颜色名. 默认为 0x888888
   */
   const gridHelper = new THREE.GridHelper(300, 30);
-//   scene.add(gridHelper);
+  scene.add(gridHelper);
   /*
     PolarGridHelper( radius : Number, radials : Number, circles : Number, divisions : Number, color1 : Color, color2 : Color )
     radius -- 极坐标格半径. 可以为任何正数. 默认为 10.
@@ -52,5 +52,5 @@ export default function help(help, THREE, scene, camera, point) {
   const circles = 8;
   const divisions = 64;
   const helper = new THREE.PolarGridHelper(radius, radials, circles, divisions);
-//   scene.add(helper);
+  scene.add(helper);
 }
