@@ -48,7 +48,4 @@ const respond = {
   num: 5,
   total: 100,
 };
-
-window.data = respond;
-
 module.exports = respond; 

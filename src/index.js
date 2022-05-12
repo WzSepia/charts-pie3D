@@ -194,11 +194,14 @@ function labelLine(point, data) {
  * lanbel
  */
 function labelText(endPoint, data) {
-  const fontLen = data.name?data.name.length:0;
+  const fontLen = data.name ? data.name.length : 0;
   const fontSize = data.style.fontSize ? data.style.fontSize : 8;
   const textLen = fontSize * fontLen;
-  const x = endPoint.x - textLen/2;
-  const y = endPoint.y < 0 ? endPoint.y - fontSize*3/2 : endPoint.y+fontSize/2;
+  const x = endPoint.x - textLen / 2;
+  const y =
+    endPoint.y < 0
+      ? endPoint.y - (fontSize * 3) / 2
+      : endPoint.y + fontSize / 2;
   const textGeo = new TextGeometry(data.name, {
     font: font, //THREE.Font的实例。
     size: fontSize, //Float。字体大小，默认值为100。
@@ -251,7 +254,7 @@ function legend(data) {
  */
 function render(animation) {
   // 通过摄像机和鼠标位置更新射线
-  // group.rotateY(0.01);
+  group.rotateY(0.01);
   raycaster.setFromCamera(pointer, camera);
   // 计算物体和射线的焦点
   const intersects = raycaster.intersectObjects(scene.children, true);
@@ -369,7 +372,20 @@ function colorRandom() {
   return "rgb(" + rgb + ")";
 }
 
-window.initPie3D = function (opt) {
+//检测
+window.initPie3D = function (params) {
+  if (!params.id) {
+    console.warn("检测到无效的图形id");
+    return;
+  }
+  if (!params.data.data || !params.data.data.length) {
+    console.warn("检测到无可绘制的数据");
+    return;
+  }
+  renderPie3D(params);
+};
+
+function renderPie3D(opt) {
   init(opt).then(() => {
     loader.load("./Arial Unicode MS_Regular.json", function (resFont) {
       font = resFont;
@@ -394,7 +410,7 @@ window.initPie3D = function (opt) {
       window.addEventListener("resize", onWindowResize);
     });
   });
-};
+}
 
 /**
  * 配置
@@ -407,9 +423,9 @@ window.opts = {
   data: respond,
   width: "100%",
   height: "100%", //window.innerHeight,
-  callback:(function (params = {}) {
+  callback: function (params = {}) {
     console.log("绑定点击事件,事件联动", params);
-  }),
+  },
   help: false,
 };
 

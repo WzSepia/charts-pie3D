@@ -42,7 +42,7 @@ const config = {
       patterns: [
         {
           from: "./src/asset/resource/Arial Unicode MS_Regular.json", //json文件路径
-          to: path.resolve(__dirname, "./dist/"), //打包后文件路径
+          to: path.resolve(__dirname, "./dist/fonts/"), //打包后文件路径
         },
       ],
     }),
