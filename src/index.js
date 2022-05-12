@@ -387,7 +387,7 @@ window.initPie3D = function (params) {
 
 function renderPie3D(opt) {
   init(opt).then(() => {
-    loader.load("./Arial Unicode MS_Regular.json", function (resFont) {
+    loader.load("./fonts/Arial Unicode MS_Regular.json", function (resFont) {
       font = resFont;
       //鼠标控制器
       let controls = new OrbitControls(camera, renderer.domElement); //创建控件对象
