@@ -28,14 +28,14 @@ let INTERSECTED;
 
 async function init(opt) {
   const root = document.body;
-  width = window.innerWidth;
-  height = window.innerHeight;
-  pieDom ? pieDom.remove() : null;
+  pieDom ? pieDom.remove() : false;
   pieDom = document.createElement("div");
   pieDom.setAttribute("id", opt.id);
-  pieDom.style.width = width;
-  pieDom.style.height = height;
+  pieDom.style.width = opt.width;
+  pieDom.style.height = opt.height;
   root.append(pieDom);
+  width = pieDom.clientWidth;
+  height = pieDom.clientHeight;
   //渲染
   if (renderer) {
     pieDom.innerHTML = "";
@@ -75,7 +75,7 @@ async function init(opt) {
   scene.add(ambient);
   //相机
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
-  camera.position.set(0, 160, 400);
+  camera.position.set(0, 0, 450);
   camera.lookAt(scene.position);
   //help-辅助
   helper(opt.help, THREE, scene, camera, point);
@@ -123,9 +123,9 @@ function arcPath(points, data) {
   const curvePath = new THREE.CatmullRomCurve3(points);
   const material = new THREE.MeshLambertMaterial({
     color: data.color,
-    opacity: 1,//0.9
+    opacity: 1, //0.9
     transparent: true,
-    wireframe:true,
+    // wireframe:true
   });
   const geometry = new THREE.ExtrudeBufferGeometry(shape, {
     bevelEnabled: false,
@@ -146,8 +146,21 @@ function arcPath(points, data) {
  * startPoint:开始点
  */
 function labelLine(point, data) {
-  const startPoint = new THREE.Vector3(point.x * 0.8, point.y, point.z * 0.8);
-  const endPoint = new THREE.Vector3(point.x, point.y + (200*data.zb) + 25, point.z);
+  let startPoint, endPoint;
+  startPoint = new THREE.Vector3(point.x * 0.8, point.y, point.z * 0.8);
+  if ((point.x > 0 && point.z > 0) || (point.x < 0 && point.z > 0)) {
+    endPoint = new THREE.Vector3(
+      point.x,
+      point.y - (200 * data.zb + 25),
+      point.z
+    );
+  } else {
+    endPoint = new THREE.Vector3(
+      point.x,
+      point.y + 200 * data.zb + 25,
+      point.z
+    );
+  }
   // const geometry = new THREE.BufferGeometry();
   // const material = new THREE.LineBasicMaterial({
   //   color: data.color,
@@ -163,12 +176,13 @@ function labelLine(point, data) {
     80, //radialSegments — Integer - 管道横截面的分段数目，默认值为8。
     true //closed — Boolean 管道的两端是否闭合，默认值为false。
   );
-  const material = new THREE.MeshBasicMaterial({ 
+  const material = new THREE.MeshBasicMaterial({
     color: data.color,
-    opacity:1,//0.9
+    opacity: 1, //0.9
   });
   // geometry.setFromPoints([startPoint, endPoint]);
   const line = new THREE.Line(geometry, material);
+  line.name = "line" + data.name;
   // scene.add(line);
   group.add(line);
   //
@@ -180,9 +194,14 @@ function labelLine(point, data) {
  * lanbel
  */
 function labelText(endPoint, data) {
+  const fontLen = data.name?data.name.length:0;
+  const fontSize = data.style.fontSize ? data.style.fontSize : 8;
+  const textLen = fontSize * fontLen;
+  const x = endPoint.x - textLen/2;
+  const y = endPoint.y < 0 ? endPoint.y - fontSize*3/2 : endPoint.y+fontSize/2;
   const textGeo = new TextGeometry(data.name, {
     font: font, //THREE.Font的实例。
-    size: data.style.fontSize? data.style.fontSize:8, //Float。字体大小，默认值为100。
+    size: fontSize, //Float。字体大小，默认值为100。
     height: 0.1, //挤出文本的厚度。默认值为50。
     curveSegments: 1, //Integer.(表示文本的）曲线上点的数量。默认值为12。
     bevelEnabled: false, //Boolean.是否开启斜角，默认为false。
@@ -193,7 +212,8 @@ function labelText(endPoint, data) {
   const material = new THREE.MeshPhongMaterial({ color: data.color });
   const mesh = new THREE.Mesh(textGeo, material);
   mesh.name = "label" + data.name;
-  mesh.position.set(endPoint.x, endPoint.y, endPoint.z);
+  mesh.position.set(x, y, endPoint.z);
+  mesh.rotateX(Math.PI / -18);
   // scene.add(mesh);
   group.add(mesh);
   legend(data);
@@ -206,7 +226,7 @@ function legend(data) {
   const geometry = new THREE.BoxGeometry(8, 8, 0.01);
   const textGeo = new TextGeometry(data.name, {
     font: font, //THREE.Font的实例。
-    size: data.style.fontSize? data.style.fontSize:8, //Float。字体大小，默认值为100。
+    size: data.style.fontSize ? data.style.fontSize : 8, //Float。字体大小，默认值为100。
     height: 1, //挤出文本的厚度。默认值为50。
     curveSegments: 20, //Integer.(表示文本的）曲线上点的数量。默认值为12。
     bevelEnabled: false, //Boolean.是否开启斜角，默认为false。
@@ -231,7 +251,7 @@ function legend(data) {
  */
 function render(animation) {
   // 通过摄像机和鼠标位置更新射线
-  group.rotateY(0.01);
+  // group.rotateY(0.01);
   raycaster.setFromCamera(pointer, camera);
   // 计算物体和射线的焦点
   const intersects = raycaster.intersectObjects(scene.children, true);
@@ -288,8 +308,8 @@ async function circlePie(res) {
 
 //自适应
 function onWindowResize() {
-  width = window.innerWidth;
-  height = window.innerHeight;
+  width = pieDom.clientWidth;
+  height = pieDom.clientHeight;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
@@ -298,16 +318,17 @@ function onWindowResize() {
 
 //点击事件
 async function click() {
+  opts.callback();
   if (INTERSECTED) {
     const childrens = group.children;
     if (INTERSECTED.name.includes("pie")) {
-      console.log(INTERSECTED);
+      console.log(INTERSECTED.data);
     }
     if (INTERSECTED.name.includes("label")) {
-      console.log(INTERSECTED);
+      console.log(INTERSECTED.data);
     }
     if (INTERSECTED.name.includes("legend")) {
-      console.log(INTERSECTED);
+      console.log(INTERSECTED.data);
     }
   }
 }
@@ -359,14 +380,14 @@ window.initPie3D = function (opt) {
       circlePie(opt.data).then(() => {
         group.translateX(-100);
         group.translateY(-25);
+        group.rotateX(Math.PI / 9);
         scene.add(group);
-        groupLegend.rotateZ(Math.PI / 50);
-        groupLegend.rotateY(Math.PI / -20);
         scene.add(groupLegend);
-        // window.scene = scene;
-        // window.renderer = renderer;
+
+        window.scene = scene;
+        window.renderer = renderer;
       });
-      //动态渲染,监听鼠标(光影)   
+      //动态渲染,监听鼠标(光影)
       animate();
       window.addEventListener("mousemove", onPointerMove);
       window.addEventListener("click", click);
@@ -382,10 +403,15 @@ window.initPie3D = function (opt) {
  * @param help:辅助线 false:不启用;true:启用
  * */
 window.opts = {
-  id:'pie',
-  data:respond,
-  help:false,
-}
+  id: "pie",
+  data: respond,
+  width: "100%",
+  height: "100%", //window.innerHeight,
+  callback:(function (params = {}) {
+    console.log("绑定点击事件,事件联动", params);
+  }),
+  help: false,
+};
 
 //执行
 initPie3D(opts);

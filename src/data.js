@@ -5,7 +5,7 @@
 const respond = {
   data: [
     {
-      name: "1.啊啊大(10%)",
+      name: "1.我是测试一(10%)",
       value: 10,
       color: "red",
       style: {
@@ -13,7 +13,7 @@ const respond = {
       },
     },
     {
-      name: "2.特有的风格(15%)",
+      name: "2.你是测试二(15%)",
       value: 15,
       color: "green",
       style: {
@@ -21,7 +21,7 @@ const respond = {
       },
     },
     {
-      name: "3.神工鬼斧(20%)",
+      name: "3.他是测试三(20%)",
       value: 20,
       color: "yellow",
       style: {
@@ -29,7 +29,7 @@ const respond = {
       },
     },
     {
-      name: "4.巴马回家(25%)",
+      name: "4.谁是测试四(25%)",
       value: 25,
       color: "blue",
       style: {
@@ -37,7 +37,7 @@ const respond = {
       },
     },
     {
-      name: "5.电风扇(30%)",
+      name: "5.没有测试五(30%)",
       value: 30,
       color: "#f60",
       style: {
