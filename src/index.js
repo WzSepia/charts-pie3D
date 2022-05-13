@@ -4,6 +4,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader";
 
+//后期处理
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { GlitchPass } from "three/examples/jsm/postprocessing/GlitchPass.js";
+
 import respond, { data } from "./data";
 import helper from "./tool";
 let pieDom,
@@ -16,6 +21,9 @@ let pieDom,
   point,
   ambient,
   camera,
+  composer,
+  renderPass,
+  glitchPass,
   loader = new FontLoader(),
   font,
   count = 0,
@@ -41,12 +49,16 @@ async function init(opt) {
     pieDom.innerHTML = "";
     renderer = null;
     scene = null;
+    composer = null;
+    renderPass = null;
+    glitchPass = null;
     group = null;
     groupLegend = null;
     point = null;
     ambient = null;
     camera = null;
     count = 0;
+
     // group.children.forEach(item=>{
     //   console.log(item);
     //   item.dispose();
@@ -77,6 +89,12 @@ async function init(opt) {
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
   camera.position.set(0, 0, 450);
   camera.lookAt(scene.position);
+  //后期处理
+  composer = new EffectComposer(renderer);
+  renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  glitchPass = new GlitchPass();
+  composer.addPass(glitchPass);
   //help-辅助
   helper(opt.help, THREE, scene, camera, point);
 }
@@ -137,6 +155,7 @@ function arcPath(points, data) {
   const mesh = new THREE.Mesh(geometry, material);
   mesh.data = data;
   mesh.name = "pie" + data.name;
+  mesh.matrixAutoUpdate = true;
   // scene.add(mesh);
   group.add(mesh);
 }
@@ -151,7 +170,7 @@ function labelLine(point, data) {
   if ((point.x > 0 && point.z > 0) || (point.x < 0 && point.z > 0)) {
     endPoint = new THREE.Vector3(
       point.x,
-      point.y - (200 * data.zb + 25),
+      point.y - (150 * data.zb + 25),
       point.z
     );
   } else {
@@ -176,13 +195,16 @@ function labelLine(point, data) {
     80, //radialSegments — Integer - 管道横截面的分段数目，默认值为8。
     true //closed — Boolean 管道的两端是否闭合，默认值为false。
   );
-  const material = new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshPhongMaterial({
     color: data.color,
     opacity: 1, //0.9
+    transparent: true,
   });
   // geometry.setFromPoints([startPoint, endPoint]);
   const line = new THREE.Line(geometry, material);
   line.name = "line" + data.name;
+  line.data = data;
+  line.matrixAutoUpdate = true;
   // scene.add(line);
   group.add(line);
   //
@@ -212,9 +234,14 @@ function labelText(endPoint, data) {
     bevelSize: 0, //Float。斜角与原始文本轮廓之间的延伸距离。默认值为8。
     bevelSegments: 1, //Integer。斜角的分段数。默认值为3。
   });
-  const material = new THREE.MeshPhongMaterial({ color: data.color });
+  const material = new THREE.MeshPhongMaterial({
+    color: data.color,
+    transparent: true,
+  });
   const mesh = new THREE.Mesh(textGeo, material);
   mesh.name = "label" + data.name;
+  mesh.data = data;
+  mesh.matrixAutoUpdate = true;
   mesh.position.set(x, y, endPoint.z);
   mesh.rotateX(Math.PI / -18);
   // scene.add(mesh);
@@ -237,11 +264,22 @@ function legend(data) {
     bevelSize: 0, //Float。斜角与原始文本轮廓之间的延伸距离。默认值为8。
     bevelSegments: 1, //Integer。斜角的分段数。默认值为3。
   });
-  const material_legend = new THREE.MeshPhongMaterial({ color: 0xffffff });
-  const material_pic = new THREE.MeshPhongMaterial({ color: data.color });
+  const material_legend = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    transparent: true,
+  });
+  const material_pic = new THREE.MeshPhongMaterial({
+    color: data.color,
+    transparent: true,
+  });
   const legend = new THREE.Mesh(textGeo, material_legend);
   const mesh = new THREE.Mesh(geometry, material_pic);
   legend.name = "legend" + data.name;
+  legend.data = data;
+  legend.matrixAutoUpdate = true;
+  mesh.name = "legend_pic" + data.name;
+  mesh.data = data;
+  mesh.matrixAutoUpdate = true;
   legend.position.set(110, 100 + -20 * count, 0);
   mesh.position.set(100, 103.2 + -20 * count, 0);
   groupLegend.add(legend);
@@ -249,16 +287,70 @@ function legend(data) {
   count++;
 }
 
+//tip
+function tip(data) {
+  const dom = document.querySelector("#pieTip");
+  const root = document.querySelector("#pie");
+  if (dom) dom.remove();
+  if (!data || !mouseEvent) return;
+  const x = mouseEvent.clientX;
+  const y = mouseEvent.clientY;
+  const box = document.createElement("div");
+  box.setAttribute("id", "pieTip");
+  box.style.position = "absolute";
+  box.style.left = x + 10 + "px";
+  box.style.top = y - 20 + "px";
+  box.style.zIndex = "999";
+  const el = `
+            <p>${data.name}</p>
+            <p>${data.value}</p>`;
+  box.innerHTML = el;
+  root.append(box);
+}
+
+//图例与图形联动
+function legend_pie(data) {
+  const name = data.name;
+  group.children.forEach((item) => {
+    if (item.name.includes(name)) {
+      if (!item.currentColor) {
+        item.currentColor = data.color;
+        item.material.emissive.setHex(0xffffff);
+        item.material.opacity = 0.2;
+      } else {
+        item.material.emissive.setHex(item.currentColor);
+        item.material.opacity = 1;
+        item.updateMatrix();
+        item.currentColor = null;
+      }
+      item.updateMatrix();
+      console.log("item", item);
+    }
+  });
+}
+
 /**
  * 渲染
  */
-function render(animation) {
+function render() {
   // 通过摄像机和鼠标位置更新射线
-  group.rotateY(0.01);
+  // group.rotateY(0.01);
   raycaster.setFromCamera(pointer, camera);
   // 计算物体和射线的焦点
   const intersects = raycaster.intersectObjects(scene.children, true);
   if (intersects.length > 0) {
+    //去掉了图例部分鼠标样式
+    if (intersects[0].object.name.includes("legend")) {
+      INTERSECTED = intersects[0].object;
+      return;
+    }
+    if (
+      intersects[0].object.name.includes("legend_pic") ||
+      intersects[0].object.name.includes("line") ||
+      intersects[0].object.name.includes("label")
+    ) {
+      return;
+    }
     if (INTERSECTED != intersects[0].object) {
       if (INTERSECTED) {
         INTERSECTED.material.emissive
@@ -286,6 +378,7 @@ function render(animation) {
     INTERSECTED = null;
   }
   renderer.render(scene, camera);
+  // composer.render();
 }
 
 //画3D饼图，环图
@@ -321,17 +414,19 @@ function onWindowResize() {
 
 //点击事件
 async function click() {
-  opts.callback();
+  if (!opts.callback) {
+    return;
+  }
   if (INTERSECTED) {
     const childrens = group.children;
     if (INTERSECTED.name.includes("pie")) {
-      console.log(INTERSECTED.data);
+      opts.callback(INTERSECTED.data);
     }
     if (INTERSECTED.name.includes("label")) {
       console.log(INTERSECTED.data);
     }
     if (INTERSECTED.name.includes("legend")) {
-      console.log(INTERSECTED.data);
+      legend_pie(INTERSECTED.data);
     }
   }
 }
@@ -340,27 +435,6 @@ async function click() {
 async function animate() {
   requestAnimationFrame(animate);
   render();
-}
-
-//tip
-function tip(data) {
-  const dom = document.querySelector("#pieTip");
-  const root = document.querySelector("#pie");
-  if (dom) dom.remove();
-  if (!data || !mouseEvent) return;
-  const x = mouseEvent.clientX;
-  const y = mouseEvent.clientY;
-  const box = document.createElement("div");
-  box.setAttribute("id", "pieTip");
-  box.style.position = "absolute";
-  box.style.left = x + 10 + "px";
-  box.style.top = y - 20 + "px";
-  box.style.zIndex = "999";
-  const el = `
-            <p>${data.name}</p>
-            <p>${data.value}</p>`;
-  box.innerHTML = el;
-  root.append(box);
 }
 
 //随机色
@@ -372,19 +446,7 @@ function colorRandom() {
   return "rgb(" + rgb + ")";
 }
 
-//检测
-window.initPie3D = function (params) {
-  if (!params.id) {
-    console.warn("检测到无效的图形id");
-    return;
-  }
-  if (!params.data.data || !params.data.data.length) {
-    console.warn("检测到无可绘制的数据");
-    return;
-  }
-  renderPie3D(params);
-};
-
+//渲染
 function renderPie3D(opt) {
   init(opt).then(() => {
     loader.load("./fonts/Arial Unicode MS_Regular.json", function (resFont) {
@@ -405,12 +467,26 @@ function renderPie3D(opt) {
       });
       //动态渲染,监听鼠标(光影)
       animate();
-      window.addEventListener("mousemove", onPointerMove);
-      window.addEventListener("click", click);
+      pieDom.addEventListener("mousemove", onPointerMove);
+      pieDom.addEventListener("click", click);
       window.addEventListener("resize", onWindowResize);
     });
   });
 }
+
+//检测
+window.initPie3D = function (params) {
+  if (!params.id) {
+    console.warn("检测到无效的图形id");
+    return;
+  }
+  if (!params.data.data || !params.data.data.length) {
+    console.warn("检测到无可绘制的数据");
+    return;
+  }
+  renderPie3D(params);
+  window.opts3D = params;
+};
 
 /**
  * 配置
@@ -418,7 +494,7 @@ function renderPie3D(opt) {
  * @param data:图形数据
  * @param help:辅助线 false:不启用;true:启用
  * */
-window.opts = {
+const opts = {
   id: "pie",
   data: respond,
   width: "100%",
